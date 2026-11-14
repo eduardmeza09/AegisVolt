@@ -1,0 +1,35 @@
+name: aegisvolt
+
+services:
+  floci:
+    image: floci/floci:2.4.0          # versión fijada; nunca latest
+    container_name: aegisvolt-floci
+    ports:
+      - "4566:4566"
+    environment:
+      FLOCI_HOSTNAME: floci
+      FLOCI_STORAGE_MODE: persistent   # sin esto Floci pierde todo al reiniciar
+      FLOCI_STORAGE_PERSISTENT_PATH: /app/data
+      FLOCI_SERVICES_EKS_MOCK: "false" # EKS real: levanta un contenedor k3s
+    volumes:
+      - floci-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  prefect-server:
+    image: prefecthq/prefect:3-python3.12
+    container_name: aegisvolt-prefect
+    profiles: ["prefect"]
+    command: prefect server start --host 0.0.0.0
+    ports:
+      - "4200:4200"
+    environment:
+      PREFECT_UI_API_URL: http://localhost:4200/api
+      PREFECT_SERVER_ANALYTICS_ENABLED: "false"
+    volumes:
+      - prefect-data:/root/.prefect
+    restart: unless-stopped
+
+volumes:
+  floci-data:
+  prefect-data:

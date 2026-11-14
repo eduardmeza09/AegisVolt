@@ -1,0 +1,14 @@
+{
+  "type": "required_status_checks",
+  "parameters": {
+    "strict_required_status_checks_policy": true,
+    "required_status_checks": [
+      { "context": "promotion-guard" },
+      { "context": "lint-build" },
+      { "context": "unit-tests" },
+      { "context": "integration-tests" },
+      { "context": "e2e-tests" },
+      { "context": "terraform-plan" }
+    ]
+  }
+}

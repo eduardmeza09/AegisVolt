@@ -1,0 +1,39 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+.terraform.tfstate.lock.info
+# .terraform.lock.hcl SÍ se versiona
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Node (frontend)
+node_modules/
+dist/
+.vite/
+
+# Local / secretos
+.env
+.env.*
+!.env.example
+*.kubeconfig
+kubeconfig*
+data/
+
+# IDE / SO
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
