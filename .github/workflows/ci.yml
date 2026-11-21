@@ -1,0 +1,225 @@
+# CI pre-merge: corre en cada Pull Request hacia dev / test / prod.
+# Los 6 jobs son "required status checks" del ruleset protected-env-branches:
+# el botón de Merge queda bloqueado hasta que todos estén en verde.
+name: ci
+
+on:
+  pull_request:
+    branches: [dev, test, prod]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.13.5"
+  PY: "3.12"
+
+jobs:
+  # ---------------------------------------------------------------------------------------------
+  # Promoción lineal estricta: feature/* -> dev -> test -> prod (nunca feature -> test/prod).
+  promotion-guard:
+    name: promotion-guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar origen -> destino del PR
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          echo "PR: $HEAD -> $BASE"
+          case "$BASE" in
+            dev)  [[ "$HEAD" == feature/* || "$HEAD" == fix/* || "$HEAD" == hotfix/* ]] || { echo "::error::A dev solo entran ramas feature/*, fix/* o hotfix/* (recibido: $HEAD)"; exit 1; } ;;
+            test) [[ "$HEAD" == "dev" ]]  || { echo "::error::A test solo se promueve desde dev (recibido: $HEAD)"; exit 1; } ;;
+            prod) [[ "$HEAD" == "test" ]] || { echo "::error::A prod solo se promueve desde test (recibido: $HEAD)"; exit 1; } ;;
+            *) echo "::error::rama destino no soportada: $BASE"; exit 1 ;;
+          esac
+          echo "Promoción válida"
+
+  # ---------------------------------------------------------------------------------------------
+  lint-build:
+    name: lint-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { version: "${{ env.UV_VERSION }}", python-version: "${{ env.PY }}" }
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "1.10.5", terraform_wrapper: false }
+      - uses: terraform-linters/setup-tflint@v4
+        with: { tflint_version: v0.55.1 }
+
+      - name: Lint Python (ruff)
+        working-directory: services
+        run: |
+          uv sync --frozen
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Validar esquema GraphQL (SDL versionado = esquema del código)
+        working-directory: services
+        env: { AEGIS_SKIP_APP: "1", PYTHONPATH: ".:libs" }
+        run: uv run python -m graphql_gateway.export_schema --check
+
+      - name: Terraform fmt / validate / tflint
+        run: |
+          terraform fmt -check -recursive infra
+          for d in infra/bootstrap infra/platform infra/platform-addons infra/live; do
+            echo "::group::validate $d"
+            terraform -chdir=$d init -backend=false -input=false >/dev/null
+            terraform -chdir=$d validate
+            echo "::endgroup::"
+          done
+          cd infra && tflint --init && tflint --recursive --config "$PWD/.tflint.hcl"
+
+      - name: Build de imágenes Docker (4 microservicios)
+        run: |
+          for pkg in station_reservation_service billing_wallet_service energy_dispatch_service graphql_gateway; do
+            docker build --build-arg SERVICE=$pkg --build-arg APP_VERSION=${GITHUB_SHA::7} -t aegisvolt/$pkg:ci services
+          done
+
+      - name: Validar manifiestos Kubernetes (kustomize)
+        run: for e in dev test prod; do kubectl kustomize k8s/overlays/$e > /dev/null && echo "overlay $e OK"; done
+
+      - name: Build frontend (si existe)
+        run: |
+          if [ -f frontend/package.json ]; then
+            cd frontend && npm ci && npm run lint --if-present && npm run build
+          else
+            echo "frontend/ aún no existe (lo entrega el compañero)"
+          fi
+
+  # ---------------------------------------------------------------------------------------------
+  unit-tests:
+    name: unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { version: "${{ env.UV_VERSION }}", python-version: "${{ env.PY }}" }
+      - name: Pytest (lógica de negocio, SAGA, compensaciones e idempotencia)
+        working-directory: services
+        run: |
+          uv sync --frozen
+          uv run pytest tests/unit -v --junitxml=unit-report.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: unit-report, path: services/unit-report.xml }
+
+  # ---------------------------------------------------------------------------------------------
+  integration-tests:
+    name: integration-tests
+    runs-on: ubuntu-latest
+    services:
+      floci:
+        image: floci/floci:2.4.0
+        ports: ["4566:4566"]
+    env:
+      AWS_ENDPOINT_URL: http://localhost:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { version: "${{ env.UV_VERSION }}", python-version: "${{ env.PY }}" }
+      - name: Esperar Floci
+        run: for i in $(seq 1 30); do curl -sf http://localhost:4566 >/dev/null && exit 0; sleep 2; done; exit 1
+      - name: Pytest contra DynamoDB (Floci) + endpoint GraphQL
+        working-directory: services
+        run: |
+          uv sync --frozen
+          uv run pytest tests/integration -v --junitxml=integration-report.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: integration-report, path: services/integration-report.xml }
+
+  # ---------------------------------------------------------------------------------------------
+  e2e-tests:
+    name: e2e-tests
+    runs-on: ubuntu-latest
+    env:
+      AWS_ENDPOINT_URL: http://localhost:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      E2E_ENV: local
+      GATEWAY_URL: http://localhost:8080/graphql
+      ADMIN_TOKEN: local-admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { version: "${{ env.UV_VERSION }}", python-version: "${{ env.PY }}" }
+      - name: Levantar Floci + 4 microservicios (docker compose)
+        run: |
+          docker compose up -d floci
+          for i in $(seq 1 30); do curl -sf http://localhost:4566 >/dev/null && break; sleep 2; done
+          (cd services && uv sync --frozen)
+          services/.venv/bin/python scripts/seed.py --env local --create-tables
+          docker compose --profile app up -d --build
+          for i in $(seq 1 60); do curl -sf http://localhost:8080/readyz && break; sleep 2; done
+      - name: E2E (éxito, fondos insuficientes, fallo de hardware => compensación)
+        run: services/.venv/bin/python -m pytest tests/e2e -v --junitxml=e2e-report.xml
+      - name: Logs si falla
+        if: failure()
+        run: docker compose --profile app logs --tail=100
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: e2e-report, path: e2e-report.xml }
+
+  # ---------------------------------------------------------------------------------------------
+  # Plan contra el workspace de la RAMA DESTINO (estado real en el S3 de Floci del runner local).
+  terraform-plan:
+    name: terraform-plan
+    runs-on: [self-hosted, aegisvolt-local]
+    # Seguridad (repo público): los PR de forks NUNCA se ejecutan en el runner del PC.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
+    defaults:
+      run: { shell: bash }
+    env:
+      TARGET_ENV: ${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: kubeconfig del EKS (Floci)
+        run: ./scripts/kubeconfig.sh
+      - name: terraform plan (workspace = rama destino)
+        id: plan
+        working-directory: infra/live
+        run: |
+          echo "Rama destino: $TARGET_ENV => workspace $TARGET_ENV"
+          terraform init -input=false -no-color >/dev/null
+          terraform workspace select -or-create "$TARGET_ENV"
+          set +e
+          terraform plan -input=false -no-color -detailed-exitcode -out=tfplan > plan.txt 2>&1
+          code=$?
+          set -e
+          cat plan.txt
+          [ $code -eq 1 ] && { echo "::error::terraform plan falló"; exit 1; }
+          summary=$(grep -E "^Plan:|No changes" plan.txt | tail -1)
+          echo "summary=${summary:-sin resumen}" >> "$GITHUB_OUTPUT"
+      - name: Comentar el plan en el PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### terraform plan — workspace \`$TARGET_ENV\`"
+            echo ""
+            echo "**${{ steps.plan.outputs.summary }}**"
+            echo ""
+            echo "<details><summary>Plan completo</summary>"
+            echo ""
+            echo '```'
+            tail -c 60000 infra/live/plan.txt
+            echo '```'
+            echo "</details>"
+          } > comment.md
+          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md --edit-last || \
+          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
+      - uses: actions/upload-artifact@v4
+        with: { name: "tfplan-${{ github.base_ref }}", path: infra/live/plan.txt }

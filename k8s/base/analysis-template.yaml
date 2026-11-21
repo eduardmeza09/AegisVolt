@@ -1,0 +1,44 @@
+# Análisis del Canary: un Job genera tráfico sintético a través de Traefik (20 % llega al canary),
+# espera el flush de métricas y consulta CloudWatch (AegisVolt/<env>: ErrorCount / RequestCount
+# con la dimensión PodTemplateHash del canary). Exit 0 => promover; exit != 0 => abort + rollback.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: canary-error-rate
+spec:
+  args:
+    - name: service
+    - name: canary-hash
+    - name: max-error-rate
+      value: "0.02"
+  metrics:
+    - name: cloudwatch-error-rate
+      count: 1
+      failureLimit: 0
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            ttlSecondsAfterFinished: 900
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: canary-check
+                    image: aegisvolt/tools:latest
+                    imagePullPolicy: Never
+                    envFrom:
+                      - configMapRef: { name: aegisvolt-config }
+                    env:
+                      - { name: SERVICE_NAME, value: canary-check }
+                      - { name: AWS_ACCESS_KEY_ID, value: test }
+                      - { name: AWS_SECRET_ACCESS_KEY, value: test }
+                    command: ["python", "-m", "aegis_common.canary_check"]
+                    args:
+                      - --service={{args.service}}
+                      - --hash={{args.canary-hash}}
+                      - --max-error-rate={{args.max-error-rate}}
+                      - --url=http://traefik.traefik.svc.cluster.local/$(ENV)/{{args.service}}/v1/info
+                    resources:
+                      requests: { cpu: 20m, memory: 64Mi }
+                      limits: { memory: 128Mi }
