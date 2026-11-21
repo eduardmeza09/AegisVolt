@@ -28,7 +28,7 @@ dist/
 .env.*
 !.env.example
 *.kubeconfig
-kubeconfig*
+kubeconfig*.yaml
 data/
 
 # IDE / SO

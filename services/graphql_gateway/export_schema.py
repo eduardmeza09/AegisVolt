@@ -1,7 +1,7 @@
 """Exporta / verifica el SDL del esquema GraphQL (contrato con el frontend).
 
-    python -m graphql_gateway.export_schema          # escribe graphql_gateway/schema.graphql
-    python -m graphql_gateway.export_schema --check  # CI: falla si el SDL versionado está desactualizado
+python -m graphql_gateway.export_schema          # escribe graphql_gateway/schema.graphql
+python -m graphql_gateway.export_schema --check  # CI: falla si el SDL versionado está desactualizado
 """
 
 import pathlib
