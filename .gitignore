@@ -43,3 +43,4 @@ services/.venv/
 .tfstate-*.json
 **/plan.txt
 **/tfplan
+observability/prefect/serve*.log
