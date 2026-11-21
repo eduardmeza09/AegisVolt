@@ -1,0 +1,41 @@
+[project]
+name = "aegisvolt-services"
+version = "1.0.0"
+description = "Microservicios AegisVolt (station-reservation, billing-wallet, energy-dispatch, graphql-gateway)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.12",
+    "uvicorn[standard]==0.34.2",
+    "boto3==1.38.23",
+    "httpx==0.28.1",
+    "strawberry-graphql[fastapi]==0.270.1",
+    "graphql-core==3.2.6",
+    "tenacity==9.1.2",
+    "pydantic==2.11.5",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==8.3.5",
+    "pytest-asyncio==0.26.0",
+    "moto[dynamodb,logs,cloudwatch]==5.1.5",
+    "ruff==0.11.11",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = [".", "libs"]
+testpaths = ["tests"]
+markers = ["integration: requiere Floci (AWS_ENDPOINT_URL)"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]

@@ -28,7 +28,7 @@ dist/
 .env.*
 !.env.example
 *.kubeconfig
-kubeconfig*
+kubeconfig*.yaml
 data/
 
 # IDE / SO
@@ -37,3 +37,9 @@ data/
 .idea/
 .DS_Store
 Thumbs.db
+
+# uv
+services/.venv/
+.tfstate-*.json
+**/plan.txt
+**/tfplan

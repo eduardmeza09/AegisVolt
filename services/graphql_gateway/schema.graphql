@@ -1,0 +1,198 @@
+type ChargingSession {
+  sessionId: String!
+  status: String!
+  stationId: String
+  connectorId: String
+  fleetId: String
+  estimatedKwh: Float!
+  powerKw: Float!
+  powerKwNow: Float!
+  kwhDelivered: Float!
+  socPercent: Float!
+  error: String
+  startedAt: String
+  updatedAt: String
+}
+
+type Connector {
+  connectorId: String!
+  stationId: String!
+  connectorType: String!
+  powerKw: Float!
+  status: ConnectorStatus!
+  sagaId: String
+  fleetId: String
+  updatedAt: String
+}
+
+"""Estado de un conector de carga"""
+enum ConnectorStatus {
+  AVAILABLE
+  RESERVED
+  CHARGING
+  FAULT
+}
+
+type Environment {
+  name: String!
+  version: String!
+  podTemplateHash: String!
+  region: String!
+}
+
+type FeatureFlag {
+  name: String!
+  enabled: Boolean!
+  description: String!
+  updatedAt: String
+  updatedBy: String
+}
+
+type Mutation {
+  """
+  Dispara la SAGA: reserva conector -> retiene saldo -> activa el cargador
+  """
+  reserveAndStartCharging(input: ReserveAndStartChargingInput!): SagaTransaction!
+
+  """Detiene la carga y libera el conector"""
+  stopCharging(sagaId: String!): SagaTransaction!
+
+  """Re-ejecuta las compensaciones de una saga (demuestra idempotencia)"""
+  retryCompensation(sagaId: String!): SagaTransaction!
+  topUpWallet(fleetId: String!, amount: Float!): Wallet!
+
+  """
+  Cambia una Feature Flag SOLO en este ambiente (requiere header x-admin-token)
+  """
+  setFeatureFlag(name: String!, enabled: Boolean!): FeatureFlag!
+}
+
+type PriceQuote {
+  connectorType: String!
+  kwh: Float!
+  pricePerKwh: Float!
+  surgeApplied: Boolean!
+  surgeMultiplier: Float!
+  total: Float!
+}
+
+type Query {
+  """Ambiente estático al que está conectado este endpoint (dev/test/prod)"""
+  environment: Environment!
+
+  """Estado de las Feature Flags del ambiente actual"""
+  featureFlags: [FeatureFlag!]!
+
+  """Electrolineras y disponibilidad de conectores en tiempo real"""
+  stations: [Station!]!
+  station(stationId: String!): Station
+
+  """Billeteras de las flotas"""
+  fleets: [Wallet!]!
+  wallet(fleetId: String!): Wallet!
+
+  """
+  Cotización con tarifa dinámica si ENABLE_DYNAMIC_SURGE_PRICING está activa
+  """
+  priceQuote(connectorType: String! = "CCS2", kwh: Float! = 30): PriceQuote!
+
+  """Historial de transacciones SAGA (opcionalmente filtrado por estado)"""
+  sagas(status: SagaStatus = null, limit: Int! = 50): [SagaTransaction!]!
+  saga(sagaId: String!): SagaTransaction
+  chargingSessions(status: String = null, limit: Int! = 50): [ChargingSession!]!
+
+  """Telemetría de consumo energético de una sesión"""
+  telemetry(sessionId: String!, limit: Int! = 60): [TelemetryReading!]!
+}
+
+input ReserveAndStartChargingInput {
+  fleetId: String!
+  stationId: String!
+  connectorId: String!
+  estimatedKwh: Float!
+
+  """
+  Clave de idempotencia de la mutación: reenviarla devuelve la misma saga
+  """
+  clientRequestId: String = null
+}
+
+"""Estado de la transacción distribuida SAGA"""
+enum SagaStatus {
+  STARTED
+  STATION_RESERVED
+  FUNDS_HELD
+  COMPENSATING
+  FUNDS_REFUNDED
+  RESERVATION_RELEASED
+  COMPLETED
+  FINISHED
+  COMPENSATED
+  FAILED
+  COMPENSATION_FAILED
+}
+
+type SagaStep {
+  name: String!
+  service: String!
+  status: String!
+  detail: String
+  at: String
+  idempotentReplay: Boolean
+}
+
+type SagaTransaction {
+  sagaId: String!
+  correlationId: String!
+  status: SagaStatus!
+  env: String!
+  fleetId: String!
+  stationId: String!
+  connectorId: String!
+  estimatedKwh: Float!
+  amount: Float
+  surgeApplied: Boolean
+  errorCode: String
+  errorMessage: String
+  failedStep: String
+  sessionId: String
+  steps: [SagaStep!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Station {
+  stationId: String!
+  name: String!
+  city: String!
+  lat: Float!
+  lng: Float!
+  connectors: [Connector!]!
+  availableConnectors: Int!
+}
+
+type TelemetryReading {
+  timestamp: String!
+  powerKw: Float!
+  kwhDelivered: Float!
+  socPercent: Float!
+}
+
+type Wallet {
+  fleetId: String!
+  fleetName: String!
+  balance: Float!
+  currency: String!
+  updatedAt: String
+  transactions: [WalletTransaction!]!
+}
+
+type WalletTransaction {
+  id: String!
+  type: String!
+  ref: String
+  amount: Float!
+  surgeApplied: Boolean!
+  reason: String
+  createdAt: String
+}
