@@ -1,0 +1,13 @@
+[project]
+name = "aegisvolt-observability"
+version = "1.0.0"
+description = "Flujos Prefect de observabilidad de AegisVolt (salud de ambientes y auditoría SAGA)"
+requires-python = ">=3.12"
+dependencies = [
+    "prefect>=3.4,<4",
+    "boto3==1.38.23",
+    "httpx==0.28.1",
+]
+
+[tool.uv]
+package = false

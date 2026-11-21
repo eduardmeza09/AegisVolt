@@ -1,0 +1,33 @@
+# Rutas del ambiente dev en Traefik (NodePort 30080): /dev/<servicio>/... -> TraefikService ponderado.
+# El API Gateway de dev apunta a /dev/graphql-gateway; los servicios internos se llaman igual.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-env-prefix
+spec:
+  stripPrefixRegex:
+    regex: ["^/dev/[a-z-]+"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: aegisvolt
+spec:
+  entryPoints: [web]
+  routes:
+    - kind: Rule
+      match: PathPrefix(`/dev/graphql-gateway`)
+      middlewares: [{ name: strip-env-prefix }]
+      services: [{ name: graphql-gateway, kind: TraefikService }]
+    - kind: Rule
+      match: PathPrefix(`/dev/station-reservation`)
+      middlewares: [{ name: strip-env-prefix }]
+      services: [{ name: station-reservation, kind: TraefikService }]
+    - kind: Rule
+      match: PathPrefix(`/dev/billing-wallet`)
+      middlewares: [{ name: strip-env-prefix }]
+      services: [{ name: billing-wallet, kind: TraefikService }]
+    - kind: Rule
+      match: PathPrefix(`/dev/energy-dispatch`)
+      middlewares: [{ name: strip-env-prefix }]
+      services: [{ name: energy-dispatch, kind: TraefikService }]

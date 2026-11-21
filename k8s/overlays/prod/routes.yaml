@@ -1,0 +1,33 @@
+# Rutas del ambiente prod en Traefik (NodePort 30080): /prod/<servicio>/... -> TraefikService ponderado.
+# El API Gateway de prod apunta a /prod/graphql-gateway; los servicios internos se llaman igual.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-env-prefix
+spec:
+  stripPrefixRegex:
+    regex: ["^/prod/[a-z-]+"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: aegisvolt
+spec:
+  entryPoints: [web]
+  routes:
+    - kind: Rule
+      match: PathPrefix(`/prod/graphql-gateway`)
+      middlewares: [{ name: strip-env-prefix }]
+      services: [{ name: graphql-gateway, kind: TraefikService }]
+    - kind: Rule
+      match: PathPrefix(`/prod/station-reservation`)
+      middlewares: [{ name: strip-env-prefix }]
+      services: [{ name: station-reservation, kind: TraefikService }]
+    - kind: Rule
+      match: PathPrefix(`/prod/billing-wallet`)
+      middlewares: [{ name: strip-env-prefix }]
+      services: [{ name: billing-wallet, kind: TraefikService }]
+    - kind: Rule
+      match: PathPrefix(`/prod/energy-dispatch`)
+      middlewares: [{ name: strip-env-prefix }]
+      services: [{ name: energy-dispatch, kind: TraefikService }]

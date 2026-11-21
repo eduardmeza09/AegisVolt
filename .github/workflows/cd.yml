@@ -1,0 +1,96 @@
+# CD post-merge: como dev/test/prod solo aceptan cambios por PR, un "push" a estas ramas
+# es siempre un merge aprobado. El ambiente se detecta DINÁMICAMENTE de la rama destino:
+#   github.ref_name = dev | test | prod  =>  terraform workspace select <rama>  =>  apply
+# y se despliega con Canary (Argo Rollouts) solo en el namespace aegisvolt-<rama>.
+name: cd
+
+on:
+  push:
+    branches: [dev, test, prod]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy-${{ github.ref_name }}
+    runs-on: [self-hosted, aegisvolt-local]
+    environment: ${{ github.ref_name }}
+    # Un despliegue a la vez por ambiente; nunca cancelar un apply en curso.
+    concurrency:
+      group: deploy-${{ github.ref_name }}
+      cancel-in-progress: false
+    defaults:
+      run: { shell: bash }
+    env:
+      TARGET_ENV: ${{ github.ref_name }}
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_ENDPOINT_URL: http://localhost:4566
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detectar ambiente destino
+        run: |
+          [[ "$TARGET_ENV" =~ ^(dev|test|prod)$ ]] || { echo "::error::rama $TARGET_ENV no es un ambiente"; exit 1; }
+          echo "Merge a '$TARGET_ENV' => workspace '$TARGET_ENV', namespace 'aegisvolt-$TARGET_ENV'"
+
+      - name: Dependencias Python
+        run: uv sync --project services --frozen
+
+      - name: kubeconfig del EKS (Floci)
+        run: ./scripts/kubeconfig.sh
+
+      - name: Plataforma compartida (solo desde dev; no-op si no hay cambios)
+        if: github.ref_name == 'dev'
+        run: |
+          for d in infra/platform infra/platform-addons; do
+            terraform -chdir=$d init -input=false -no-color >/dev/null
+            terraform -chdir=$d apply -auto-approve -input=false -no-color | tail -3
+          done
+
+      - name: terraform apply (workspace = ${{ github.ref_name }})
+        working-directory: infra/live
+        run: |
+          terraform init -input=false -no-color >/dev/null
+          terraform workspace select -or-create "$TARGET_ENV"
+          echo "workspace activo: $(terraform workspace show)"
+          terraform apply -auto-approve -input=false -no-color
+
+      - name: Despliegue Canary en Kubernetes (20% -> análisis CloudWatch -> 50% -> 100%)
+        run: ./scripts/deploy.sh "$TARGET_ENV" "${GITHUB_SHA::7}"
+
+      - name: Smoke test GraphQL vía API Gateway
+        run: |
+          URL=$(terraform -chdir=infra/live output -raw graphql_url)
+          echo "GraphQL $TARGET_ENV: $URL"
+          RESP=$(curl -sf -X POST "$URL" -H 'content-type: application/json' \
+                 -d '{"query":"{ environment { name version } stations { stationId } }"}')
+          echo "$RESP"
+          echo "$RESP" | grep -q "\"name\": \"$TARGET_ENV\"" || echo "$RESP" | grep -q "\"name\":\"$TARGET_ENV\""
+          echo "$RESP" | grep -q "${GITHUB_SHA::7}"
+
+      - name: E2E contra el ambiente desplegado (dev y test)
+        if: github.ref_name != 'prod'
+        run: |
+          export GATEWAY_URL=$(terraform -chdir=infra/live output -raw graphql_url)
+          export ADMIN_TOKEN=$(terraform -chdir=infra/live output -raw admin_token)
+          export E2E_ENV="$TARGET_ENV"
+          PY=services/.venv/Scripts/python; [ -x "$PY" ] || PY=services/.venv/bin/python
+          $PY -m pytest tests/e2e -v -p no:cacheprovider
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "## Despliegue $TARGET_ENV (${GITHUB_SHA::7})"
+            echo ""
+            echo "- Workspace Terraform: \`$TARGET_ENV\` (estado en s3://aegisvolt-tfstate/env:/$TARGET_ENV/aegisvolt/terraform.tfstate)"
+            echo "- Namespace: \`aegisvolt-$TARGET_ENV\`"
+            echo "- GraphQL: $(terraform -chdir=infra/live output -raw graphql_url 2>/dev/null || echo n/a)"
+            echo ""
+            echo '```'
+            KUBECONFIG="$HOME/.kube/aegisvolt.yaml" kubectl get rollouts -n "aegisvolt-$TARGET_ENV" 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
