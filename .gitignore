@@ -37,3 +37,6 @@ data/
 .idea/
 .DS_Store
 Thumbs.db
+
+# uv
+services/.venv/

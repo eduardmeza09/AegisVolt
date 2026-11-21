@@ -1,5 +1,14 @@
 name: aegisvolt
 
+# Red con IP fija para Floci: los pods de k3s (que Floci conecta a esta red)
+# alcanzan Floci en 172.30.0.10 sin depender del DNS embebido de Docker.
+networks:
+  aegisvolt-net:
+    name: aegisvolt-net
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+
 services:
   floci:
     image: floci/floci:2.4.0          # versión fijada; nunca latest
@@ -11,9 +20,13 @@ services:
       FLOCI_STORAGE_MODE: persistent   # sin esto Floci pierde todo al reiniciar
       FLOCI_STORAGE_PERSISTENT_PATH: /app/data
       FLOCI_SERVICES_EKS_MOCK: "false" # EKS real: levanta un contenedor k3s
+      FLOCI_SERVICES_DOCKER_NETWORK: aegisvolt-net
     volumes:
       - floci-data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      aegisvolt-net:
+        ipv4_address: 172.30.0.10
     restart: unless-stopped
 
   prefect-server:
@@ -28,7 +41,53 @@ services:
       PREFECT_SERVER_ANALYTICS_ENABLED: "false"
     volumes:
       - prefect-data:/root/.prefect
+    networks: [aegisvolt-net]
     restart: unless-stopped
+
+  # ---- Stack de aplicación para tests e2e / desarrollo local (sin Kubernetes) ----
+  station-reservation:
+    profiles: ["app"]
+    build: { context: ./services, args: { SERVICE: station_reservation_service } }
+    environment: &svc-env
+      ENV: ${AEGIS_ENV:-local}
+      AWS_ENDPOINT_URL: http://floci:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      LOG_TO_CLOUDWATCH: "true"
+      METRICS_ENABLED: "true"
+    networks: [aegisvolt-net]
+    depends_on: [floci]
+
+  billing-wallet:
+    profiles: ["app"]
+    build: { context: ./services, args: { SERVICE: billing_wallet_service } }
+    environment:
+      <<: *svc-env
+      PEAK_HOURS: "0-24"
+    networks: [aegisvolt-net]
+    depends_on: [floci]
+
+  energy-dispatch:
+    profiles: ["app"]
+    build: { context: ./services, args: { SERVICE: energy_dispatch_service } }
+    environment: *svc-env
+    networks: [aegisvolt-net]
+    depends_on: [floci]
+
+  graphql-gateway:
+    profiles: ["app"]
+    build: { context: ./services, args: { SERVICE: graphql_gateway } }
+    ports:
+      - "8080:8080"
+    environment:
+      <<: *svc-env
+      STATION_URL: http://station-reservation:8080
+      BILLING_URL: http://billing-wallet:8080
+      DISPATCH_URL: http://energy-dispatch:8080
+      ADMIN_TOKEN: local-admin
+    networks: [aegisvolt-net]
+    depends_on: [station-reservation, billing-wallet, energy-dispatch]
 
 volumes:
   floci-data:
