@@ -197,7 +197,7 @@ jobs:
         working-directory: infra/live
         run: |
           echo "Rama destino: $TARGET_ENV => workspace $TARGET_ENV"
-          terraform init -input=false -no-color >/dev/null
+          ../../scripts/tf-init.sh .   # providers desde mirror local: no depende de internet
           terraform workspace select -or-create "$TARGET_ENV"
           set +e
           terraform plan -input=false -no-color -detailed-exitcode -out=tfplan > plan.txt 2>&1
