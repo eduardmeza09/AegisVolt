@@ -44,3 +44,5 @@ services/.venv/
 **/plan.txt
 **/tfplan
 observability/prefect/serve*.log
+frontend/playwright-report/
+frontend/test-results/

@@ -83,6 +83,16 @@ jobs:
           PY=services/.venv/Scripts/python; [ -x "$PY" ] || PY=services/.venv/bin/python
           $PY -m pytest tests/e2e -v -p no:cacheprovider
 
+      - name: E2E desde el frontend desplegado (Edge del runner, dev y test)
+        if: github.ref_name != 'prod'
+        working-directory: frontend
+        run: |
+          export E2E_BASE_URL=$(terraform -chdir=../infra/live output -raw frontend_url)
+          export ADMIN_TOKEN=$(terraform -chdir=../infra/live output -raw admin_token)
+          echo "Frontend bajo prueba: $E2E_BASE_URL"
+          npm ci --no-audit --no-fund
+          PW_CHANNEL=msedge npx playwright test
+
       - name: Resumen
         if: always()
         run: |
