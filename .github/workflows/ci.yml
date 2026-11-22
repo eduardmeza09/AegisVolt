@@ -84,13 +84,17 @@ jobs:
       - name: Validar manifiestos Kubernetes (kustomize)
         run: for e in dev test prod; do kubectl kustomize k8s/overlays/$e > /dev/null && echo "overlay $e OK"; done
 
-      - name: Build frontend (si existe)
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: frontend/package-lock.json }
+
+      - name: Frontend (typecheck, tests, build e imagen nginx)
+        working-directory: frontend
         run: |
-          if [ -f frontend/package.json ]; then
-            cd frontend && npm ci && npm run lint --if-present && npm run build
-          else
-            echo "frontend/ aún no existe (lo entrega el compañero)"
-          fi
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm test
+          npm run build
+          docker build -t aegisvolt/frontend:ci .
 
   # ---------------------------------------------------------------------------------------------
   unit-tests:

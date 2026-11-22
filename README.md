@@ -6,7 +6,7 @@ Plataforma cloud-native de gestión de carga para flotas eléctricas y electroli
 - Plan: [PLAN.md](PLAN.md)
 - Arquitectura y decisiones: [docs/arquitectura.md](docs/arquitectura.md)
 - Runbook de la defensa: [docs/runbook-defensa.md](docs/runbook-defensa.md)
-- Frontend (compañero): [docs/frontend-handoff.md](docs/frontend-handoff.md)
+- Frontend: [docs/frontend.md](docs/frontend.md)
 
 ## Estructura
 
@@ -14,6 +14,7 @@ Plataforma cloud-native de gestión de carga para flotas eléctricas y electroli
 |---|---|
 | `services/` | 4 microservicios Python (FastAPI) + librería común `aegis_common` + tests |
 | `services/graphql_gateway/schema.graphql` | Contrato GraphQL (validado en CI) |
+| `frontend/` | React + Vite + TS (nginx), servido en `/web` del API Gateway de cada ambiente |
 | `infra/bootstrap` | Bucket S3 versionado del tfstate + tabla de locks |
 | `infra/platform`, `infra/platform-addons` | VPC de plataforma + EKS + ECR; Traefik + Argo Rollouts |
 | `infra/live` | Stack por **workspace** (`dev`/`test`/`prod`): VPC, VPCE, peering, DynamoDB, flags, CloudWatch, API Gateway, namespace |

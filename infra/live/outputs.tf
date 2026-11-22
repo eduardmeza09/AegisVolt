@@ -18,3 +18,7 @@ output "admin_token" {
   value     = random_password.admin_token.result
   sensitive = true
 }
+output "frontend_url" {
+  description = "Frontend web del ambiente (servido por el mismo API Gateway que GraphQL)"
+  value       = "${var.aws_endpoint}/restapis/${module.api_gateway.api_id}/${local.env}/_user_request_/web/"
+}
