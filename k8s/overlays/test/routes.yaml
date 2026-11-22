@@ -31,3 +31,7 @@ spec:
       match: PathPrefix(`/test/energy-dispatch`)
       middlewares: [{ name: strip-env-prefix }]
       services: [{ name: energy-dispatch, kind: TraefikService }]
+    - kind: Rule
+      match: PathPrefix(`/test/web`)
+      middlewares: [{ name: strip-env-prefix }]
+      services: [{ name: frontend, port: 80 }]

@@ -70,6 +70,9 @@ jobs:
           echo "$RESP"
           echo "$RESP" | grep -q "\"name\": \"$TARGET_ENV\"" || echo "$RESP" | grep -q "\"name\":\"$TARGET_ENV\""
           echo "$RESP" | grep -q "${GITHUB_SHA::7}"
+          WEB=$(terraform -chdir=infra/live output -raw frontend_url)
+          echo "Frontend $TARGET_ENV: $WEB"
+          curl -sf "$WEB" | grep -q "<title>AegisVolt</title>"
 
       - name: E2E contra el ambiente desplegado (dev y test)
         if: github.ref_name != 'prod'
@@ -89,6 +92,7 @@ jobs:
             echo "- Workspace Terraform: \`$TARGET_ENV\` (estado en s3://aegisvolt-tfstate/env:/$TARGET_ENV/aegisvolt/terraform.tfstate)"
             echo "- Namespace: \`aegisvolt-$TARGET_ENV\`"
             echo "- GraphQL: $(terraform -chdir=infra/live output -raw graphql_url 2>/dev/null || echo n/a)"
+            echo "- Frontend: $(terraform -chdir=infra/live output -raw frontend_url 2>/dev/null || echo n/a)"
             echo ""
             echo '```'
             KUBECONFIG="$HOME/.kube/aegisvolt.yaml" kubectl get rollouts -n "aegisvolt-$TARGET_ENV" 2>/dev/null || true
