@@ -101,12 +101,20 @@ code { background: #0f1a23; border: 1px solid var(--line); padding: 1px 6px; bor
 .tag { margin-left: 8px; padding: 1px 8px; border-radius: 999px; font: 600 10px var(--body); background: rgba(34, 195, 230, 0.15); color: var(--cyan); vertical-align: middle; }
 .tag.warn { background: rgba(245, 184, 75, 0.15); color: var(--warn); }
 
+/* ---------------------------------------------------------------- fotos de vehículos */
+.car-photo {
+  display: block; width: 100%; height: auto; user-select: none;
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 100%);
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 100%);
+}
+.car-photo.flip { transform: scaleX(-1); }
+
 /* ---------------------------------------------------------------- hero */
 .hero { position: relative; padding: 10px var(--gutter) 40px; overflow-x: clip; }
 .hero .mega { position: absolute; top: 0; left: 0; right: 0; }
 .hero-art { position: relative; display: grid; grid-template-columns: 1fr 2.2fr; align-items: end; gap: 2vw; padding-top: clamp(40px, 7vw, 90px); min-height: clamp(260px, 42vw, 560px); }
 .hero-charger { width: clamp(110px, 18vw, 250px); justify-self: center; filter: drop-shadow(0 0 30px rgba(34, 195, 230, 0.35)); }
-.hero-car { width: 100%; filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.8)); }
+.hero-car { width: 112%; margin-left: -6%; }
 .floor { position: absolute; left: -10%; right: -10%; bottom: -30px; height: 80px; background: radial-gradient(50% 60% at 55% 30%, rgba(34, 195, 230, 0.18), transparent 70%); }
 .hero-foot { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 46px; flex-wrap: wrap; }
 .hero-foot p { max-width: 560px; margin: 0; font-size: 13px; color: #c3ccd4; }
@@ -126,15 +134,16 @@ code { background: #0f1a23; border: 1px solid var(--line); padding: 1px 6px; bor
   position: relative; height: clamp(170px, 24vw, 300px); max-width: 860px; margin: 0 auto;
   border-radius: 26px; overflow: hidden;
   background:
-    radial-gradient(70% 90% at 50% 15%, rgba(120, 225, 255, 0.95), rgba(34, 140, 200, 0.55) 35%, rgba(5, 15, 25, 0.9) 75%),
-    #071018;
-  box-shadow: 0 0 60px rgba(34, 195, 230, 0.35), inset 0 -40px 60px rgba(0, 0, 0, 0.6);
+    radial-gradient(55% 65% at 50% 0%, rgba(110, 220, 255, 0.55), rgba(34, 150, 210, 0.18) 45%, transparent 75%),
+    radial-gradient(70% 40% at 50% 100%, rgba(34, 195, 230, 0.22), transparent 70%),
+    #000;
+  border: 1px solid rgba(34, 195, 230, 0.35);
+  box-shadow: 0 0 70px rgba(34, 195, 230, 0.3), inset 0 0 60px rgba(0, 0, 0, 0.8);
 }
-.stage::after { content: ""; position: absolute; inset: auto 0 0; height: 32%; background: linear-gradient(180deg, transparent, rgba(150, 230, 255, 0.25)); }
-.stage-car { position: absolute; bottom: 8%; width: 46%; }
-.stage-car.left { left: -4%; transform: scaleX(-1); opacity: 0.85; }
-.stage-car.right { right: -4%; opacity: 0.85; }
-.stage-car.center { left: 27%; width: 46%; z-index: 2; }
+.stage-car { position: absolute; bottom: 4%; mix-blend-mode: lighten; }
+.stage-car.left { left: -7%; width: 43%; opacity: 0.85; }
+.stage-car.right { right: -7%; width: 43%; opacity: 0.85; }
+.stage-car.center { left: 21%; width: 58%; bottom: 0; z-index: 2; mix-blend-mode: normal; }
 .showroom-foot { display: grid; grid-template-columns: 1fr 1.2fr; gap: 40px; align-items: end; margin-top: 36px; }
 .showroom-foot p { color: #c3ccd4; font-size: 13px; max-width: 420px; }
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0; }
@@ -173,7 +182,7 @@ code { background: #0f1a23; border: 1px solid var(--line); padding: 1px 6px; bor
 /* reservar */
 .reserve { display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(24px, 4vw, 56px); align-items: start; }
 .reserve-art { position: sticky; top: 100px; display: grid; gap: 22px; }
-.reserve-art svg { width: 100%; filter: drop-shadow(0 0 40px rgba(34, 195, 230, 0.18)); }
+.reserve-car { transition: filter 0.6s; }
 .result { padding: 18px 20px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); display: grid; gap: 4px; }
 .result b { font: 700 16px var(--display); text-transform: uppercase; }
 .result span { color: #c3ccd4; font-size: 13px; }
@@ -210,13 +219,13 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 /* flags */
 .flag-row { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 18px; align-items: end; margin-bottom: 30px; }
 .flag { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 20px 18px 22px; border-radius: 20px; border: 1px solid var(--line); background: linear-gradient(180deg, rgba(15, 25, 34, 0.9), rgba(8, 13, 18, 0.9)); transition: border-color 0.3s, box-shadow 0.3s; }
-.flag svg { width: 100%; }
+.flag .car-photo { margin: -6px 0 -4px; }
 .flag.mid { padding-top: 30px; }
 .flag h3 { margin: 4px 0 0; font: 700 14px var(--display); text-transform: uppercase; }
 .flag p { margin: 0; font-size: 12px; }
 .flag.on { border-color: rgba(47, 91, 255, 0.6); box-shadow: 0 0 40px rgba(47, 91, 255, 0.25); }
 .flag.on.danger { border-color: rgba(255, 93, 108, 0.6); box-shadow: 0 0 40px rgba(255, 93, 108, 0.25); }
-.flag.off svg { opacity: 0.55; filter: grayscale(0.4); }
+.flag.off .car-photo { opacity: 0.75; }
 .flag small { font-size: 11px; }
 .flag-state { display: flex; align-items: center; gap: 10px; font: 700 11px var(--display); letter-spacing: 0.12em; }
 .switch { width: 38px; height: 20px; border-radius: 99px; background: #1b2631; position: relative; transition: background 0.3s; }

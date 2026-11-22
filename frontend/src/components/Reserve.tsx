@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { gql, Q } from "../api";
-import { Car } from "../art/Car";
+import { CarPhoto, type Paint } from "../art/CarPhoto";
 import { usePoll } from "../hooks";
 import { ERROR_LABEL, money, SAGA_LABEL, sagaTone } from "../lib";
 import type { Fleet, Quote, Saga, Station } from "../types";
 import { SagaSteps } from "./SagaSteps";
+
+// El vehículo refleja el resultado de la SAGA: encendido si la carga se activó, apagado si se compensó.
+function paintFor(saga: Saga | null): Paint {
+  if (!saga) return "black";
+  const tone = sagaTone(saga.status);
+  return tone === "ok" ? "blue" : tone === "info" ? "black" : "grey";
+}
 
 interface Props {
   stations: Station[];
@@ -78,7 +85,7 @@ export function Reserve({ stations, pick, onDone }: Props) {
 
       <div className="reserve">
         <div className="reserve-art">
-          <Car variant="dark" />
+          <CarPhoto paint={paintFor(saga)} className="reserve-car" />
           {saga && (
             <div className={`result tone-${sagaTone(saga.status)}`}>
               <b>{SAGA_LABEL[saga.status]}</b>

@@ -1,4 +1,4 @@
-import { Car } from "../art/Car";
+import { CarPhoto } from "../art/CarPhoto";
 import type { ChargingSession, Saga, Station } from "../types";
 
 interface Props {
@@ -25,9 +25,9 @@ export function Showroom({ stations, sessions, sagas }: Props) {
         <em>más inteligente</em>
       </h2>
       <div className="stage">
-        <Car variant="white" className="stage-car left" />
-        <Car variant="white" className="stage-car right" />
-        <Car variant="white" className="stage-car center" />
+        <CarPhoto paint="grey" className="stage-car left" sizes="30vw" />
+        <CarPhoto paint="black" className="stage-car right" flip sizes="30vw" />
+        <CarPhoto paint="blue" className="stage-car center" sizes="(max-width: 680px) 80vw, 45vw" />
       </div>
       <div className="showroom-foot">
         <div>

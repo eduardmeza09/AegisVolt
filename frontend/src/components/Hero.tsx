@@ -1,4 +1,4 @@
-import { Car } from "../art/Car";
+import { CarPhoto } from "../art/CarPhoto";
 import { Charger } from "../art/Charger";
 import type { Environment } from "../types";
 
@@ -10,7 +10,7 @@ export function Hero({ env, online, updatedAt }: { env: Environment | null; onli
       </div>
       <div className="hero-art">
         <Charger className="hero-charger" />
-        <Car variant="dark" className="hero-car" />
+        <CarPhoto paint="black" className="hero-car" sizes="(max-width: 680px) 70vw, 65vw" eager />
         <div className="floor" />
       </div>
       <div className="hero-foot">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { gql, Q } from "../api";
-import { Car } from "../art/Car";
+import { CarPhoto } from "../art/CarPhoto";
 import { useLocalStorage, usePoll } from "../hooks";
 import { timeAgo } from "../lib";
 import type { Environment, FeatureFlag } from "../types";
@@ -45,7 +45,7 @@ export function Flags() {
           const danger = f.name === "SIMULATE_CHARGER_HARDWARE_FAULT";
           return (
             <article key={f.name} className={`flag ${f.enabled ? "on" : "off"} ${danger ? "danger" : ""} ${i === 1 ? "mid" : ""}`}>
-              <Car variant={f.enabled ? (danger ? "dark" : "blue") : "white"} glow={f.enabled} />
+              <CarPhoto paint={f.enabled ? (danger ? "black" : "blue") : "grey"} sizes="(max-width: 680px) 90vw, 30vw" />
               <h3>{label}</h3>
               <p className="muted">{hint}</p>
               <div className="flag-state">
