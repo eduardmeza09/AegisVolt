@@ -46,14 +46,14 @@ jobs:
         if: github.ref_name == 'dev'
         run: |
           for d in infra/platform infra/platform-addons; do
-            terraform -chdir=$d init -input=false -no-color >/dev/null
+            ./scripts/tf-init.sh $d
             terraform -chdir=$d apply -auto-approve -input=false -no-color | tail -3
           done
 
       - name: terraform apply (workspace = ${{ github.ref_name }})
         working-directory: infra/live
         run: |
-          terraform init -input=false -no-color >/dev/null
+          ../../scripts/tf-init.sh .   # providers desde mirror local: no depende de internet
           terraform workspace select -or-create "$TARGET_ENV"
           echo "workspace activo: $(terraform workspace show)"
           terraform apply -auto-approve -input=false -no-color

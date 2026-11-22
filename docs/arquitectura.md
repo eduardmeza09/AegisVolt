@@ -126,3 +126,4 @@ Tabla `aegisvolt-feature-flags-<env>`, sembrada por Terraform con `lifecycle { i
 | Plano de datos de VPC Link no emulado | `integration_mode = "direct"` (sección 4) |
 | Al reiniciar Floci, el nodo k3s cambia de IP | `scripts/up.sh` regenera el kubeconfig y aplica de nuevo cada workspace. `data.kubernetes_nodes` actualiza la integración |
 | Git Bash convierte rutas `/aegisvolt/...` | Los scripts exportan `MSYS_NO_PATHCONV=1` |
+| Caídas de DNS o de internet hacían fallar `terraform init` en el CD (no podía descargar providers) | `scripts/tf-init.sh` instala los providers desde un *filesystem mirror* local (`~/.terraform-mirror`), sin red. Solo descarga si falta una versión. Los checksums se validan igual contra `.terraform.lock.hcl` |
