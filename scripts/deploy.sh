@@ -33,6 +33,8 @@ for svc in "${!PKG[@]}"; do
 done
 docker tag "aegisvolt/graphql-gateway:$TAG" aegisvolt/tools:latest
 images+=(aegisvolt/tools:latest)
+docker build -q -t "aegisvolt/frontend:$TAG" "$ROOT/frontend" >/dev/null
+images+=("aegisvolt/frontend:$TAG")
 
 echo "==> [$ENV] importando ${#images[@]} imágenes en el nodo k3s ($NODE)"
 docker save "${images[@]}" | docker exec -i "$NODE" ctr -n k8s.io images import - >/dev/null
@@ -56,6 +58,7 @@ for svc in "${!PKG[@]}"; do
   fi
 done
 "$ROLL" list rollouts -n "$NS" 2>/dev/null || kubectl get rollouts -n "$NS"
+kubectl rollout status deployment/frontend -n "$NS" --timeout=180s || failed=1
 
 echo "==> [$ENV] seed idempotente de datos de demo"
 PY="$ROOT/services/.venv/Scripts/python"; [[ -x "$PY" ]] || PY="$ROOT/services/.venv/bin/python"; [[ -x "$PY" ]] || PY=python

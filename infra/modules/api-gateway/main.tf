@@ -96,6 +96,46 @@ resource "aws_apigatewayv2_route" "proxy" {
   target    = "integrations/${aws_apigatewayv2_integration.gateway.id}"
 }
 
+# Frontend (nginx en el namespace del ambiente) bajo el MISMO API: .../<stage>/web/
+# => el navegador habla con GraphQL en el mismo origen (.../<stage>/graphql), sin CORS.
+resource "aws_apigatewayv2_integration" "frontend" {
+  api_id             = aws_apigatewayv2_api.this.id
+  integration_type   = "HTTP_PROXY"
+  integration_method = "ANY"
+  integration_uri = (var.integration_mode == "vpc_link"
+    ? aws_lb_listener.http.arn
+  : "http://${var.node_ip}:${var.node_port}/${var.env}/web/{proxy}")
+  connection_type        = var.integration_mode == "vpc_link" ? "VPC_LINK" : "INTERNET"
+  connection_id          = var.integration_mode == "vpc_link" ? aws_apigatewayv2_vpc_link.this.id : null
+  payload_format_version = "1.0"
+}
+
+# {proxy+} exige al menos un segmento: la raíz /web y /web/ necesitan su propia ruta.
+resource "aws_apigatewayv2_integration" "frontend_root" {
+  api_id             = aws_apigatewayv2_api.this.id
+  integration_type   = "HTTP_PROXY"
+  integration_method = "ANY"
+  integration_uri = (var.integration_mode == "vpc_link"
+    ? aws_lb_listener.http.arn
+  : "http://${var.node_ip}:${var.node_port}/${var.env}/web/")
+  connection_type        = var.integration_mode == "vpc_link" ? "VPC_LINK" : "INTERNET"
+  connection_id          = var.integration_mode == "vpc_link" ? aws_apigatewayv2_vpc_link.this.id : null
+  payload_format_version = "1.0"
+}
+
+resource "aws_apigatewayv2_route" "frontend_root" {
+  for_each  = toset(["ANY /web", "ANY /web/"])
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = each.key
+  target    = "integrations/${aws_apigatewayv2_integration.frontend_root.id}"
+}
+
+resource "aws_apigatewayv2_route" "frontend" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "ANY /web/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.frontend.id}"
+}
+
 resource "aws_apigatewayv2_stage" "env" {
   api_id      = aws_apigatewayv2_api.this.id
   name        = var.env

@@ -95,7 +95,8 @@ $A dynamodb get-item --table-name aegisvolt-reservations-test --key '{"station_i
 ```
 - En la UI de Prefect (http://localhost:4200), abre Deployments, luego `aegisvolt-saga-consistency-audit` y ejecuta **Quick run**. En Artifacts aparecen `aegisvolt-saga-audit` y `aegisvolt-env-health`.
 - `aegisvolt-trace-saga` (bajo demanda) recibe `env` y `correlation_id` y genera la traza como artifact.
-- Flags en dev sin redesplegar: `./scripts/flags.sh set dev ENABLE_DYNAMIC_SURGE_PRICING false`. El frontend de dev cambia a los ≤ 5 s y el de prod no.
+- **Frontend por ambiente**: `for e in dev test prod; do (cd infra/live && terraform workspace select $e >/dev/null && terraform output -raw frontend_url; echo); done`. Abre dev y prod en dos pestañas.
+- Flags en dev sin redesplegar: `./scripts/flags.sh set dev ENABLE_DYNAMIC_SURGE_PRICING false`. La tarjeta del flag en el frontend de dev cambia en ≤ 3 s (y el precio deja de mostrar «tarifa pico») mientras la pestaña de prod sigue igual.
 
 ## 5. Tests
 
