@@ -1,6 +1,10 @@
 # Frontend web
 
-Aplicación React 18 + Vite + TypeScript ubicada en [`frontend/`](../frontend). El diseño sigue la referencia visual del proyecto: fondo oscuro, acento cian neón, títulos con la fuente ancha Syncopate y el "ELECTRIC" gigante de fondo. Las ilustraciones son SVG propios (`src/art/`): un auto con variantes blanca, oscura y azul, y un cargador.
+Aplicación React 18 + Vite + TypeScript ubicada en [`frontend/`](../frontend). El diseño sigue la referencia visual del proyecto: fondo oscuro, acento cian neón, títulos con la fuente ancha Syncopate y el "ELECTRIC" gigante de fondo. Las fotos del vehículo (`frontend/public/img/car-{black,blue,grey}[-sm].webp`) se generaron con IA y se retocaron con `scripts/retouch_car_images.py` para **quitar los emblemas de marca** (capó y tapas de rueda). El script también las recorta y las exporta a WebP en 1800 px y 900 px, servidas con `srcset`. El fondo negro se funde con el sitio mediante una máscara CSS elíptica. El cargador es un SVG propio (`src/art/Charger.tsx`) que se enciende cuando hay una carga activa.
+
+La variante del auto cambia según el estado:
+- **Reserva:** negro antes de enviar, azul con luces si la SAGA completa y gris apagado si se compensa o falla.
+- **Flags:** azul si están activos (negro con luces para el flag de fallo) y gris si están inactivos.
 
 ## Cómo se conecta a cada ambiente
 
