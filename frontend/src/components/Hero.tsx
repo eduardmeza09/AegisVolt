@@ -1,5 +1,4 @@
 import { CarPhoto } from "../art/CarPhoto";
-import { Charger } from "../art/Charger";
 import type { Environment } from "../types";
 
 export function Hero({ env, online, updatedAt }: { env: Environment | null; online: boolean; updatedAt: number | null }) {
@@ -9,7 +8,8 @@ export function Hero({ env, online, updatedAt }: { env: Environment | null; onli
         ELECTRIC
       </div>
       <div className="hero-art">
-        <Charger className="hero-charger" />
+        <img className="car-photo hero-charger" src="./img/charger-hero.webp" width={470} height={525}
+          alt="Estación de carga rápida con el conector enchufado" decoding="async" />
         <CarPhoto paint="black" className="hero-car" sizes="(max-width: 680px) 70vw, 65vw" eager />
         <div className="floor" />
       </div>

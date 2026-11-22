@@ -112,8 +112,8 @@ code { background: #0f1a23; border: 1px solid var(--line); padding: 1px 6px; bor
 /* ---------------------------------------------------------------- hero */
 .hero { position: relative; padding: 10px var(--gutter) 40px; overflow-x: clip; }
 .hero .mega { position: absolute; top: 0; left: 0; right: 0; }
-.hero-art { position: relative; display: grid; grid-template-columns: 1fr 2.2fr; align-items: end; gap: 2vw; padding-top: clamp(40px, 7vw, 90px); min-height: clamp(260px, 42vw, 560px); }
-.hero-charger { width: clamp(110px, 18vw, 250px); justify-self: center; filter: drop-shadow(0 0 30px rgba(34, 195, 230, 0.35)); }
+.hero-art { position: relative; display: grid; grid-template-columns: 1.15fr 2fr; align-items: end; gap: 2vw; padding-top: clamp(40px, 7vw, 90px); min-height: clamp(260px, 42vw, 560px); }
+.hero-charger { width: 100%; max-width: 380px; height: auto; justify-self: center; }
 .hero-car { width: 112%; margin-left: -6%; }
 .floor { position: absolute; left: -10%; right: -10%; bottom: -30px; height: 80px; background: radial-gradient(50% 60% at 55% 30%, rgba(34, 195, 230, 0.18), transparent 70%); }
 .hero-foot { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 46px; flex-wrap: wrap; }
@@ -155,7 +155,13 @@ code { background: #0f1a23; border: 1px solid var(--line); padding: 1px 6px; bor
 .station { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 22px 22px 18px; overflow: hidden; min-height: 210px; }
 .station h3 { margin: 0; font: 500 15px var(--body); text-transform: uppercase; letter-spacing: 0.04em; }
 .station-body .muted { font-size: 12px; margin: 2px 0 14px; }
-.station-art { width: 76px; align-self: end; opacity: 0.95; }
+.station-art {
+  width: 82px; height: auto; align-self: end; transition: filter 0.6s;
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%);
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%);
+}
+.station-art.off { filter: grayscale(1) brightness(0.55); }
+.station-art.on { filter: saturate(1.25) drop-shadow(0 0 14px rgba(34, 195, 230, 0.55)); }
 .connectors { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .conn {
   width: 100%; display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 10px;

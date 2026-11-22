@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { gql, Q } from "../api";
-import { Charger } from "../art/Charger";
 import { timeAgo } from "../lib";
 import type { ChargingSession, Connector, Station, Telemetry } from "../types";
 
@@ -90,7 +89,8 @@ export function Stations({ stations, sessions, updatedAt, error, onPick }: Props
                   ))}
                 </ul>
               </div>
-              <Charger className="station-art" active={charging} />
+              <img className={`station-art ${charging ? "on" : "off"}`} src="./img/charger.webp" width={275} height={490}
+                alt={charging ? "Cargador entregando energía" : "Cargador en espera"} loading="lazy" decoding="async" />
             </article>
           );
         })}

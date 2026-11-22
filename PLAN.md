@@ -1,5 +1,24 @@
 # Plan de desarrollo — AegisVolt
 
+> **Documento histórico.** Este es el plan con el que arrancó el proyecto y se conserva para trazabilidad. El estado final implementado está en [README.md](README.md), [docs/arquitectura.md](docs/arquitectura.md) y [docs/frontend.md](docs/frontend.md). La sección siguiente resume en qué se apartó la implementación de este plan y por qué.
+
+## Cambios respecto al plan
+
+| Plan original | Implementación final | Motivo |
+|---|---|---|
+| Frontend a cargo de un compañero (sección 10) | Frontend hecho por el autor: React + Vite + TS en nginx, publicado en `/web` del API Gateway de cada ambiente | El profesor confirmó que la entrega es 100 % individual |
+| Un clúster EKS por ambiente o uno compartido según la RAM | Un clúster EKS (k3s de Floci) compartido, con un namespace por ambiente, ResourceQuota y NetworkPolicy | 16 GB de RAM con unos 4 GB libres |
+| Canary por proporción de réplicas | Canary con pesos reales de Traefik (TraefikService) y 1 réplica estable | Menos RAM y un 20 % exacto |
+| ECR como origen de las imágenes | Repos ECR declarados en Terraform; imágenes importadas en k3s con `ctr images import` | El push al ECR de Floci falla desde Docker Desktop (DNS `*.localhost`) |
+| `aws eks update-kubeconfig` | `scripts/kubeconfig.sh` con la credencial de admin del k3s | El webhook de tokens EKS de Floci 2.4.0 rechaza los tokens |
+| Integración API Gateway → VPC Link → NLB | Declarada en Terraform; en Floci, `HTTP_PROXY` directo al NodePort (`integration_mode = "direct"`) | Floci no emula el plano de datos del VPC Link |
+| Rulesets con el provider de Terraform para GitHub | `scripts/apply-rulesets.sh` (`gh api`), en dos fases: `base` y luego `full` con 6 checks obligatorios | Más rápido. Los checks obligatorios se activaron cuando el CI ya existía |
+| E2E solo por API | E2E por API **y desde el navegador** (Playwright) en el CI y en el CD de dev y test | La especificación pide validar el flujo "desde el Frontend/API" |
+| `terraform init` descargando providers | `scripts/tf-init.sh` con mirror local de providers | Caídas de DNS hicieron fallar CDs |
+| Cronograma de 5 días (sección 9) | Todo implementado, desplegado y promovido por PRs hasta prod | — |
+
+---
+
 ## Contexto
 
 Proyecto final individual de *Patrones Arquitectónicos Avanzados*: una plataforma cloud-native para reservar bahías de carga EV, retener saldo y activar sesiones de carga. El flujo pasa por 3 microservicios y se resuelve con una **SAGA con compensaciones**. Los ambientes `dev`, `test` y `prod` quedan aislados mediante **Terraform Workspaces**, el estado vive en S3 versionado, y hay CI/CD en GitHub con promoción lineal y **Canary**. La observabilidad usa CloudWatch y Prefect. En la defensa se califica cada pregunta como correcta o incorrecta y se piden demos en vivo, así que cada requisito debe poder **demostrarse con un comando**.
