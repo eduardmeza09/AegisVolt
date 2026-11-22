@@ -157,22 +157,39 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with: { version: "${{ env.UV_VERSION }}", python-version: "${{ env.PY }}" }
-      - name: Levantar Floci + 4 microservicios (docker compose)
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - name: Levantar Floci + 4 microservicios + frontend (docker compose)
         run: |
           docker compose up -d floci
           for i in $(seq 1 30); do curl -sf http://localhost:4566 >/dev/null && break; sleep 2; done
           (cd services && uv sync --frozen)
           services/.venv/bin/python scripts/seed.py --env local --create-tables
           docker compose --profile app up -d --build
-          for i in $(seq 1 60); do curl -sf http://localhost:8080/readyz && break; sleep 2; done
-      - name: E2E (éxito, fondos insuficientes, fallo de hardware => compensación)
+          for i in $(seq 1 60); do curl -sf http://localhost:8080/readyz && curl -sf http://localhost:8081/web/ >/dev/null && break; sleep 2; done
+      - name: E2E por API (éxito, fondos insuficientes, fallo de hardware => compensación)
         run: services/.venv/bin/python -m pytest tests/e2e -v --junitxml=e2e-report.xml
+      - name: Preparar navegador (Playwright + Chromium)
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: E2E desde el frontend (navegador real operando la UI)
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: http://localhost:8081/web/
+        run: npx playwright test
       - name: Logs si falla
         if: failure()
         run: docker compose --profile app logs --tail=100
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: e2e-report, path: e2e-report.xml }
+        with:
+          name: e2e-report
+          path: |
+            e2e-report.xml
+            frontend/playwright-report/
+            frontend/test-results/
 
   # ---------------------------------------------------------------------------------------------
   # Plan contra el workspace de la RAMA DESTINO (estado real en el S3 de Floci del runner local).

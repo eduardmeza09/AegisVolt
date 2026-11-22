@@ -89,6 +89,16 @@ services:
     networks: [aegisvolt-net]
     depends_on: [station-reservation, billing-wallet, energy-dispatch]
 
+  frontend:
+    profiles: ["app"]
+    build: ./frontend
+    ports:
+      - "8081:8080"      # http://localhost:8081/web/
+    volumes:
+      - ./frontend/nginx.compose.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [aegisvolt-net]
+    depends_on: [graphql-gateway]
+
 volumes:
   floci-data:
   prefect-data:
