@@ -31,6 +31,7 @@
 | Cómputo | EKS de Floci = k3s real (v1.31), 1 clúster compartido, 1 namespace por ambiente |
 | Servicios | Python 3.12, FastAPI, boto3, httpx, tenacity; imagen única parametrizada (`services/Dockerfile`) |
 | API | GraphQL (Strawberry). Contrato en `services/graphql_gateway/schema.graphql` |
+| Frontend | React + Vite + TS en nginx, un Deployment por namespace, publicado en `/<stage>/web/` del mismo API Gateway (mismo origen que GraphQL). Ver `docs/frontend.md` |
 | Despliegue | Kustomize (`k8s/overlays/<env>`) + Argo Rollouts Canary + Traefik weighted |
 | Observabilidad | CloudWatch Logs/Metrics/Alarms + Prefect 3 (`observability/prefect`) |
 

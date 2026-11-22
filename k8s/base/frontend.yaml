@@ -1,0 +1,42 @@
+# Frontend estático (nginx). RollingUpdate simple: el Canary con análisis de métricas aplica
+# a los microservicios con lógica de negocio; el frontend no publica métricas de errores.
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  labels: { app: frontend }
+spec:
+  selector: { app: frontend }
+  ports: [{ name: http, port: 80, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels: { app: frontend, app.kubernetes.io/part-of: aegisvolt }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels: { app: frontend }
+  template:
+    metadata:
+      labels: { app: frontend, app.kubernetes.io/part-of: aegisvolt }
+    spec:
+      containers:
+        - name: web
+          image: aegisvolt/frontend:IMAGE_TAG
+          imagePullPolicy: Never
+          ports: [{ name: http, containerPort: 8080 }]
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 48Mi }

@@ -8,3 +8,4 @@ resources:
   - billing-wallet.yaml
   - energy-dispatch.yaml
   - graphql-gateway.yaml
+  - frontend.yaml
