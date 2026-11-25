@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import json
 
-from prefect import flow
-from prefect.artifacts import create_markdown_artifact
+from prefect import artifacts, flow
 
 from .common import client
 
@@ -24,6 +23,6 @@ def trace_saga(env: str, correlation_id: str) -> int:
     md = [f"# Traza `{correlation_id}` ({env})\n", "| hora | nivel | servicio | paso | mensaje |", "|---|---|---|---|---|"]
     md += [f"| {r['timestamp'][11:23]} | {r['level']} | {r['service']} | {r.get('step') or '-'} | {r['message']} |"
            for r in rows]
-    create_markdown_artifact(key="aegisvolt-saga-trace", markdown="\n".join(md))
+    artifacts.create_markdown_artifact(key="aegisvolt-saga-trace", markdown="\n".join(md))
     print(f"{len(rows)} eventos encontrados en /aegisvolt/{env}/*")
     return len(rows)
