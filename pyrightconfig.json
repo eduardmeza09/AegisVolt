@@ -1,0 +1,39 @@
+{
+  "$comment": "Configuración del analizador de VS Code (Pylance/pyright). Los servicios importan la librería compartida aegis_common desde services/libs (igual que pytest con pythonpath), y cada parte Python usa su propio entorno virtual de uv.",
+  "typeCheckingMode": "off",
+  "pythonVersion": "3.12",
+  "venvPath": "services",
+  "venv": ".venv",
+  "executionEnvironments": [
+    {
+      "root": "services",
+      "extraPaths": [
+        "services",
+        "services/libs"
+      ]
+    },
+    {
+      "root": "observability/prefect",
+      "extraPaths": [
+        "observability/prefect",
+        "observability/prefect/.venv/Lib/site-packages",
+        "observability/prefect/.venv/lib/python3.12/site-packages"
+      ]
+    },
+    {
+      "root": "scripts",
+      "extraPaths": [
+        "services/libs"
+      ]
+    }
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/.venv",
+    "**/__pycache__",
+    "frontend"
+  ],
+  "ignore": [
+    "scripts/retouch_car_images.py"
+  ]
+}

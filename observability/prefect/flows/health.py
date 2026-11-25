@@ -5,8 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 
-from prefect import flow, get_run_logger, task
-from prefect.artifacts import create_table_artifact
+from prefect import artifacts, flow, get_run_logger, task
 
 from .common import ENVS, TABLE_KINDS, client, cw_log, graphql, put_metrics
 
@@ -79,8 +78,8 @@ def environment_health(envs: list[str] = ENVS) -> dict:
         put_metrics(env, {"EnvHealthy": 1 if healthy else 0})
         cw_log(env, "health-check", healthy=healthy)
         (log.info if healthy else log.warning)(f"[{env}] saludable={healthy}")
-    create_table_artifact(key="aegisvolt-env-health", table=rows,
-                          description=f"Salud de ambientes. EKS={eks['status']} (k8s {eks['version']})")
+    artifacts.create_table_artifact(key="aegisvolt-env-health", table=rows,
+                                    description=f"Salud de ambientes. EKS={eks['status']} (k8s {eks['version']})")
     return report
 
 
