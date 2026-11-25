@@ -71,6 +71,19 @@ module "network" {
   azs    = local.azs
 }
 
+# VPC Endpoints de la VPC de plataforma: los pods (nodos EKS en subredes privadas, sin ruta a
+# internet) salen a DynamoDB/S3 por los Gateway VPCE y a CloudWatch/STS por los Interface VPCE.
+# Los VPCE Gateway no se comparten por peering: cada VPC necesita los suyos.
+module "vpc_endpoints" {
+  source                  = "../modules/vpc-endpoints"
+  name                    = "aegisvolt-platform"
+  vpc_id                  = module.network.vpc_id
+  vpc_cidr                = local.cidr
+  region                  = "us-east-1"
+  private_subnet_ids      = module.network.private_subnet_ids
+  private_route_table_ids = [module.network.private_route_table_id]
+}
+
 resource "aws_iam_role" "eks_cluster" {
   name = "aegisvolt-eks-cluster-role"
   assume_role_policy = jsonencode({
@@ -166,4 +179,7 @@ output "platform_vpc_cidr" { value = local.cidr }
 output "platform_private_route_table_id" { value = module.network.private_route_table_id }
 output "platform_private_subnet_ids" { value = module.network.private_subnet_ids }
 output "eks_security_group_id" { value = aws_security_group.eks_cluster.id }
+output "platform_vpc_endpoints" {
+  value = merge(module.vpc_endpoints.gateway_endpoint_ids, module.vpc_endpoints.interface_endpoint_ids)
+}
 output "ecr_repositories" { value = { for k, r in aws_ecr_repository.svc : k => r.repository_url } }
