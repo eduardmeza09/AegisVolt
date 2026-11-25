@@ -14,8 +14,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 
-from prefect import flow, get_run_logger, task
-from prefect.artifacts import create_markdown_artifact, create_table_artifact
+from prefect import artifacts, flow, get_run_logger, task
 
 from .common import ENVS, cw_log, graphql, put_metrics, table
 
@@ -119,8 +118,8 @@ def saga_consistency_audit(envs: list[str] = ENVS, orphan_minutes: int = 5, auto
         md.append("")
         (log.warning if orphans or inconsistent else log.info)(
             f"[{env}] auditadas={len(audits)} huérfanas={len(orphans)} inconsistentes={len(inconsistent)}")
-    create_table_artifact(key="aegisvolt-saga-audit", table=summary_rows, description="Consistencia SAGA por ambiente")
-    create_markdown_artifact(key="aegisvolt-saga-audit-detail", markdown="\n".join(md))
+    artifacts.create_table_artifact(key="aegisvolt-saga-audit", table=summary_rows, description="Consistencia SAGA por ambiente")
+    artifacts.create_markdown_artifact(key="aegisvolt-saga-audit-detail", markdown="\n".join(md))
     return result
 
 
